@@ -1,0 +1,170 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Роли пользователей
+enum UserRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+// Статусы объекта
+enum ObjectStatus {
+  DRAFT
+  ON_REVIEW
+  NEEDS_REVISION
+  PUBLISHED
+  ARCHIVED
+  PUBLISH_ERROR
+}
+
+// Статусы публикации в WordPress
+enum WpPublishStatus {
+  NOT_PUBLISHED
+  WP_DRAFT
+  PUBLISHED
+  UPDATED
+  UNPUBLISHED
+  PUBLISH_ERROR
+}
+
+// Типы медиафайлов
+enum MediaType {
+  MAIN_IMAGE
+  GALLERY
+  PLAN
+  RENDER
+  PHOTO
+  PRESENTATION_COVER
+  PORTFOLIO
+}
+
+// Пользователи
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(EDITOR)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  objects    Object[]
+  auditLogs  AuditLog[]
+}
+
+// Объекты (главная сущность)
+model Object {
+  id               String        @id @default(uuid())
+  title            String
+  shortTitle       String?
+  city             String
+  address          String?
+  designYear       String?
+  realizationYear  String?
+  projectStatus    String?
+  objectType       String?
+  client           String?
+  inpadRole        String?
+  designStage      String?
+  area             Float?
+  siteArea         Float?
+  floors           String?
+  shortDescription String
+  fullDescription  String?
+
+  status          ObjectStatus    @default(DRAFT)
+  wpPublishStatus WpPublishStatus @default(NOT_PUBLISHED)
+  wpPostId        Int?
+  wpPostUrl       String?
+
+  seoTitle       String?
+  seoDescription String?
+  seoSlug        String?
+  seoImage       String?
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  media       Media[]
+  categories  ObjectCategory[]
+  teamMembers TeamMember[]
+  techSpecs   TechSpec[]
+  auditLogs   AuditLog[]
+}
+
+// Медиафайлы
+model Media {
+  id          String    @id @default(uuid())
+  objectId    String
+  object      Object    @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  type        MediaType
+  filename    String
+  url         String
+  altText     String?
+  caption     String?
+  sortOrder   Int       @default(0)
+  useOnSite   Boolean   @default(true)
+  useInPptx   Boolean   @default(false)
+  useInPortfolio Boolean @default(false)
+  createdAt   DateTime  @default(now())
+}
+
+// Категории объекта
+model Category {
+  id      String           @id @default(uuid())
+  name    String           @unique
+  slug    String           @unique
+  objects ObjectCategory[]
+}
+
+model ObjectCategory {
+  objectId   String
+  categoryId String
+  object     Object   @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@id([objectId, categoryId])
+}
+
+// Команда проекта
+model TeamMember {
+  id       String @id @default(uuid())
+  objectId String
+  object   Object @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  role     String
+  name     String
+  sortOrder Int   @default(0)
+}
+
+// Технико-экономические показатели
+model TechSpec {
+  id       String @id @default(uuid())
+  objectId String
+  object   Object @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  label    String
+  value    String
+  unit     String?
+  sortOrder Int   @default(0)
+}
+
+// Журнал действий
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  objectId  String?
+  object    Object?  @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  action    String
+  details   Json?
+  createdAt DateTime @default(now())
+}
