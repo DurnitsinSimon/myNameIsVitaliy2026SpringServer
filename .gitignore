@@ -59,3 +59,12 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
+
+# Скомпилированные файлы конфигов
+prisma.config.d.ts
+prisma.config.js
+prisma.config.js.map
+prisma/prisma.config.d.ts
+prisma/prisma.config.js
+prisma/prisma.config.js.map
+*.tsbuildinfo

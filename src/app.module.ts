@@ -6,14 +6,22 @@ import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './common/guards/jwtAuth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import jwtConfig from './config/jwtConfig';
+import { ObjectsModule } from './modules/objects/objects.module';
+import minioConfig from './config/minioConfig';
+import { MediaModule } from './modules/media/media.module';
+import wordpressConfig from './config/wordpressConfig';
+import { WordpressModule } from './modules/wordpress/wordpress.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [jwtConfig],
+      load: [jwtConfig, minioConfig, wordpressConfig],
     }),
     AuthModule,
+    ObjectsModule,
+    MediaModule,
+    WordpressModule
   ],
   providers: [
     PrismaService,
