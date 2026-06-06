@@ -14,6 +14,14 @@ enum UserRole {
   VIEWER
 }
 
+enum DictionaryType {
+  OBJECT_TYPE
+  CITY
+  DESIGN_STAGE
+  PROJECT_STATUS
+  INPAD_ROLE
+}
+
 // Статусы объекта
 enum ObjectStatus {
   DRAFT
@@ -167,4 +175,16 @@ model AuditLog {
   action    String
   details   Json?
   createdAt DateTime @default(now())
+}
+
+
+model Dictionary {
+  id        String         @id @default(uuid())
+  type      DictionaryType
+  name      String
+  sortOrder Int            @default(0)
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+
+  @@unique([type, name])
 }
