@@ -9,10 +9,14 @@ import { CreateObjectDto } from './dto/createObject.dto';
 import { UpdateObjectDto } from './dto/updateObject.dto';
 import { QueryObjectDto } from './dto/queryObject.dto';
 import { ObjectStatus, UserRole } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class ObjectsService {
-  constructor(private repository: ObjectsRepository) {}
+  constructor(
+    private repository: ObjectsRepository,
+    private audit: AuditService,
+  ) {}
 
   async create(dto: CreateObjectDto, userId: string) {
     return this.repository.create(dto, userId);
@@ -51,7 +55,14 @@ export class ObjectsService {
       this.validateForPublishing(object);
     }
 
-    return this.repository.updateStatus(id, status);
+    const updated = await this.repository.updateStatus(id, status);
+    await this.audit.log({
+      userId,
+      action: 'OBJECT_STATUS_CHANGED',
+      objectId: id,
+      details: { status },
+    });
+    return updated;
   }
 
   async delete(id: string, userId: string, userRole: UserRole) {
@@ -61,6 +72,11 @@ export class ObjectsService {
       throw new ForbiddenException('Удалять объект может только администратор или его автор');
     }
 
+    await this.audit.log({
+      userId,
+      action: 'OBJECT_DELETED',
+      details: { title: object.title, objectId: id },
+    });
     return this.repository.delete(id);
   }
 
