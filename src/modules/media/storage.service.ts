@@ -58,4 +58,20 @@ export class StorageService implements OnModuleInit {
       await this.client.removeObject(this.bucket, filename);
     }
   }
+
+  async downloadFile(url: string): Promise<Buffer> {
+    const filename = url.split('/').pop();
+    if (!filename) {
+      throw new Error('Некорректный URL файла');
+    }
+
+    const stream = await this.client.getObject(this.bucket, filename);
+    const chunks: Buffer[] = [];
+
+    return new Promise((resolve, reject) => {
+      stream.on('data', (chunk) => chunks.push(chunk));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+      stream.on('error', reject);
+    });
+  }
 }
