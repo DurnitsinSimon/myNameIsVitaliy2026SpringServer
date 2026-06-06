@@ -17,7 +17,7 @@ import { CurrentUser } from '../../common/decorators/currentUser.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import * as client from '@prisma/client';
 import { UpdateStatusDto } from './dto/updateStatusObject.dto';
-
+import { Audit } from '../../common/decorators/audit.decorator';
 
 @Controller('objects')
 export class ObjectsController {
@@ -25,6 +25,7 @@ export class ObjectsController {
 
   @Post()
   @Roles(client.UserRole.ADMIN, client.UserRole.EDITOR)
+  @Audit('OBJECT_CREATED')
   create(@Body() dto: CreateObjectDto, @CurrentUser() user: client.User) {
     return this.objectsService.create(dto, user.id);
   }
@@ -41,6 +42,7 @@ export class ObjectsController {
 
   @Patch(':id')
   @Roles(client.UserRole.ADMIN, client.UserRole.EDITOR)
+  @Audit('OBJECT_UPDATED')
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateObjectDto,
@@ -61,7 +63,10 @@ export class ObjectsController {
 
   @Delete(':id')
   @Roles(client.UserRole.ADMIN, client.UserRole.EDITOR)
-  delete(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: client.User) {
+  delete(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: client.User,
+  ) {
     return this.objectsService.delete(id, user.id, user.role);
   }
 }
