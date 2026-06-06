@@ -11,6 +11,7 @@ import minioConfig from './config/minioConfig';
 import { MediaModule } from './modules/media/media.module';
 import wordpressConfig from './config/wordpressConfig';
 import { WordpressModule } from './modules/wordpress/wordpress.module';
+import { ExportModule } from './modules/export/export.module';
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { WordpressModule } from './modules/wordpress/wordpress.module';
     AuthModule,
     ObjectsModule,
     MediaModule,
-    WordpressModule
+    WordpressModule,
+    ExportModule,
   ],
   providers: [
     PrismaService,
