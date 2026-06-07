@@ -1,98 +1,274 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# ИНПАД — Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Внутренняя система управления архитектурными объектами для бюро ИНПАД. Бэкенд предоставляет REST API для управления карточками объектов, загрузки медиафайлов, публикации на сайт WordPress и генерации документов (презентации, портфолио).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Содержание
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [О проекте](#о-проекте)
+- [Технологический стек](#технологический-стек)
+- [Архитектура](#архитектура)
+- [Требования](#требования)
+- [Запуск проекта](#запуск-проекта)
+- [Структура API](#структура-api)
+- [Структура проекта](#структура-проекта)
+- [Работа в команде](#работа-в-команде)
 
-## Project setup
+---
+
+## О проекте
+
+ИНПАД — архитектурное бюро с публичным сайтом на WordPress. Этот бэкенд — часть внутренней админ-панели для сотрудников. Логика работы:
+
+1. Редактор создаёт карточку объекта во внутренней системе и наполняет её данными и изображениями.
+2. Объект проходит цепочку статусов: черновик → на проверке → опубликован.
+3. После проверки объект публикуется на публичный сайт WordPress через его REST API.
+4. Из тех же данных система генерирует презентации (PPTX), портфолио (DOCX) и PDF для отправки клиентам.
+
+Обычные посетители видят только публичный сайт WordPress. Внутренняя система доступна исключительно сотрудникам с разграничением прав по ролям.
+
+---
+
+## Технологический стек
+
+| Технология | Назначение |
+|------------|------------|
+| **NestJS** | Backend-фреймворк, модульная архитектура |
+| **TypeScript** | Язык разработки, строгая типизация |
+| **PostgreSQL** | Основная база данных |
+| **Prisma ORM** | Работа с БД, миграции, типобезопасные запросы |
+| **JWT + Passport** | Авторизация и ролевая модель доступа (RBAC) |
+| **MinIO** | S3-совместимое хранилище медиафайлов |
+| **WordPress REST API** | Публикация объектов на публичный сайт |
+| **pptxgenjs / docx / pdfkit** | Генерация документов |
+| **Docker Compose** | Локальное окружение (БД, хранилище, WordPress) |
+| **Swagger** | Автодокументация API |
+
+---
+
+## Архитектура
+
+Проект построен по принципу разделения ответственности. Каждый модуль домена содержит чёткие слои:
+
+- **Controller** — принимает HTTP-запросы, маршрутизация, проверка прав.
+- **Service** — бизнес-логика: проверки, правила, валидация.
+- **Repository** — работа с базой данных (для модулей со сложными запросами).
+- **DTO** — схемы входящих данных с автоматической валидацией.
+
+Сквозные задачи вынесены в общий слой:
+
+- **Guards** — `JwtAuthGuard` (проверка токена, глобально на всех маршрутах), `RolesGuard` (проверка роли).
+- **Interceptors** — `AuditInterceptor` (автоматическое логирование действий).
+- **Filters** — `AllExceptionsFilter` (единый формат ошибок, обработка ошибок Prisma).
+- **Decorators** — `@CurrentUser`, `@Roles`, `@Public`, `@Audit`.
+
+### Модули системы
+
+| Модуль | Назначение |
+|--------|------------|
+| `auth` | Регистрация, вход, JWT, роли |
+| `objects` | CRUD объектов, статусы согласования, валидация |
+| `media` | Загрузка изображений в MinIO |
+| `wordpress` | Публикация и снятие объектов на сайте |
+| `export` | Генерация PPTX / DOCX / PDF |
+| `dictionaries` | Справочники (типы, города, стадии) |
+| `audit` | Журнал действий пользователей |
+
+### Роли пользователей
+
+- **ADMIN** — полный доступ, управление пользователями, справочниками и журналом.
+- **EDITOR** — создание и редактирование своих объектов, загрузка медиа, выгрузка.
+- **VIEWER** — только просмотр и выгрузка, без права редактирования.
+
+---
+
+## Требования
+
+- **Node.js** 20 или новее
+- **Docker Desktop** (для PostgreSQL, MinIO и WordPress)
+
+---
+
+## Запуск проекта
+
+### 1. Клонировать репозиторий
 
 ```bash
-$ npm install
+git clone <url-репозитория>
+cd server
 ```
 
-## Compile and run the project
+### 2. Установить зависимости
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm install
 ```
 
-## Run tests
+### 3. Настроить переменные окружения
+
+Скопировать пример и заполнить значения:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+cp .env.example .env
 ```
 
-## Deployment
+Содержимое `.env`:
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+```env
+# База данных
+DATABASE_URL="postgresql://inpad_user:inpad_password@localhost:5432/inpad_db"
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+# JWT
+JWT_SECRET="ваш-секретный-ключ"
+JWT_EXPIRES_IN="7d"
+
+# MinIO (хранилище файлов)
+MINIO_ENDPOINT="localhost"
+MINIO_PORT=9000
+MINIO_ACCESS_KEY="minioadmin"
+MINIO_SECRET_KEY="minioadmin"
+MINIO_BUCKET="inpad-media"
+MINIO_USE_SSL=false
+
+# WordPress
+WORDPRESS_URL="http://localhost:8080"
+WORDPRESS_USER="admin"
+WORDPRESS_APP_PASSWORD="пароль-приложения-из-wordpress"
+
+# Приложение
+PORT=3000
+```
+
+### 4. Поднять инфраструктуру в Docker
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker compose up -d
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Эта команда запускает контейнеры:
+- **PostgreSQL** (порт 5432) — база данных
+- **MinIO** (порты 9000 / 9001) — хранилище файлов
+- **WordPress + MySQL** (порт 8080) — сайт для публикации
 
-## Resources
+### 5. Применить миграции базы данных
 
-Check out a few resources that may come in handy when working with NestJS:
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### 6. Наполнить базу начальными данными
 
-## Support
+```bash
+npm run seed
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Создаёт администратора и заполняет справочники:
+- **Логин:** `admin@inpad.ru`
+- **Пароль:** `admin123`
 
-## Stay in touch
+### 7. Настроить хранилище MinIO
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Открыть консоль MinIO `http://localhost:9001` (логин/пароль `minioadmin`), создать bucket с именем `inpad-media` (если не создан).
 
-## License
+### 8. Настроить WordPress (для интеграции публикации)
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+1. Открыть `http://localhost:8080`, пройти установку WordPress.
+2. В админке: **Настройки → Постоянные ссылки** → выбрать «Название записи» → сохранить (включает REST API по человекочитаемым путям).
+3. **Пользователи → Профиль → Application Passwords** → создать пароль приложения.
+4. Вписать логин и пароль приложения в `.env` (`WORDPRESS_USER`, `WORDPRESS_APP_PASSWORD`).
+
+### 9. Запустить приложение
+
+```bash
+npm run start:dev
+```
+
+После запуска доступны:
+- **API:** `http://localhost:3000/api`
+- **Документация Swagger:** `http://localhost:3000/docs`
+
+---
+
+## Структура API
+
+Базовый префикс — `/api`. Все эндпоинты, кроме входа и регистрации, требуют заголовок `Authorization: Bearer <JWT>`.
+
+| Раздел | Префикс | Описание |
+|--------|---------|----------|
+| Авторизация | `/auth` | Регистрация, вход, профиль |
+| Объекты | `/objects` | CRUD, статусы, фильтрация |
+| Медиафайлы | `/media` | Загрузка и управление изображениями |
+| Публикация | `/wordpress` | Публикация на сайт |
+| Выгрузка | `/export` | Генерация PPTX / DOCX / PDF |
+| Справочники | `/dictionaries` | Списки значений для форм |
+| Журнал | `/audit` | История действий (только ADMIN) |
+
+Полная интерактивная документация со всеми параметрами и схемами доступна на `http://localhost:3000/docs` после запуска.
+
+---
+
+## Структура проекта
+
+```
+src/
+├── common/                 # Общая инфраструктура
+│   ├── decorators/         # @CurrentUser, @Roles, @Public, @Audit
+│   ├── guards/             # JwtAuthGuard, RolesGuard
+│   ├── interceptors/       # AuditInterceptor
+│   └── filters/            # AllExceptionsFilter
+├── config/                 # Конфигурация (jwt, minio, wordpress)
+├── modules/                # Модули домена
+│   ├── auth/
+│   ├── objects/
+│   ├── media/
+│   ├── wordpress/
+│   ├── export/
+│   ├── dictionaries/
+│   └── audit/
+├── prisma.service.ts       # Подключение к БД
+├── app.module.ts           # Корневой модуль
+└── main.ts                 # Точка входа
+
+prisma/
+├── schema.prisma           # Схема базы данных
+└── seed.ts                 # Начальное наполнение
+```
+
+---
+
+## Полезные команды
+
+```bash
+npm run start:dev      # Запуск в режиме разработки (с автоперезагрузкой)
+npm run build          # Сборка проекта
+npm run seed           # Наполнение БД начальными данными
+npx prisma studio      # Визуальный просмотр базы данных
+npx prisma migrate dev # Создание и применение миграции
+docker compose up -d   # Поднять инфраструктуру
+docker compose down    # Остановить инфраструктуру
+```
+
+---
+
+## Работа в команде
+
+Проект разрабатывается по Git Flow:
+
+- `main` — стабильная, проверенная версия (релизы).
+- `develop` — основная ветка разработки.
+- `feature/*` — ветки под отдельные задачи.
+
+**Порядок работы над новой задачей:**
+
+```bash
+git checkout develop
+git pull origin develop
+git checkout -b feature/название-задачи
+# ... работа, коммиты ...
+git push -u origin feature/название-задачи
+# создать Pull Request в develop, пройти ревью, влить
+```
+
+Прямые коммиты в `main` и `develop` не приветствуются — все изменения проходят через Pull Request с ревью.
