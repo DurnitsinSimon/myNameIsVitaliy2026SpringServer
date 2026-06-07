@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { PrismaService } from './prisma.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './common/guards/jwtAuth.guard';
@@ -11,6 +11,10 @@ import minioConfig from './config/minioConfig';
 import { MediaModule } from './modules/media/media.module';
 import wordpressConfig from './config/wordpressConfig';
 import { WordpressModule } from './modules/wordpress/wordpress.module';
+import { ExportModule } from './modules/export/export.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
+import { DictionariesModule } from './modules/dictionaries/dictionaries.module';
 
 @Module({
   imports: [
@@ -21,12 +25,16 @@ import { WordpressModule } from './modules/wordpress/wordpress.module';
     AuthModule,
     ObjectsModule,
     MediaModule,
-    WordpressModule
+    WordpressModule,
+    ExportModule,
+    AuditModule,
+    DictionariesModule
   ],
   providers: [
     PrismaService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
   exports: [PrismaService],
 })

@@ -1,7 +1,8 @@
-import { Injectable, Logger, NotFoundException, BadGatewayException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadGatewayException } from '@nestjs/common';
 import { PrismaService } from '../../prisma.service';
 import { WordpressClient } from './wordpress.client';
 import { ObjectStatus, WpPublishStatus, Object as ProjectObject } from '@prisma/client';
+import { ObjectsService } from '../objects/objects.service';
 
 @Injectable()
 export class WordpressService {
@@ -10,6 +11,7 @@ export class WordpressService {
   constructor(
     private prisma: PrismaService,
     private client: WordpressClient,
+    private objectsService: ObjectsService
   ) {}
 
   async checkConnection() {
@@ -30,7 +32,7 @@ export class WordpressService {
       throw new NotFoundException('Объект не найден');
     }
 
-    this.validateForPublishing(object);
+    this.objectsService.validateForPublishing(object);
 
     const payload = this.buildPayload(object);
 
@@ -107,32 +109,4 @@ export class WordpressService {
     };
   }
 
-  private validateForPublishing(object: {
-    title: string;
-    city: string;
-    shortDescription: string;
-    seoTitle: string | null;
-    seoDescription: string | null;
-    seoSlug: string | null;
-    media: { type: string }[];
-  }) {
-    const errors: string[] = [];
-
-    if (!object.title) errors.push('Отсутствует название');
-    if (!object.city) errors.push('Отсутствует город');
-    if (!object.shortDescription) errors.push('Отсутствует краткое описание');
-    if (!object.seoTitle) errors.push('Отсутствует SEO заголовок');
-    if (!object.seoDescription) errors.push('Отсутствует SEO описание');
-    if (!object.seoSlug) errors.push('Отсутствует SEO slug');
-
-    const hasMainImage = object.media?.some((m) => m.type === 'MAIN_IMAGE');
-    if (!hasMainImage) errors.push('Отсутствует главное изображение');
-
-    if (errors.length > 0) {
-      throw new BadRequestException({
-        message: 'Объект не готов к публикации',
-        errors,
-      });
-    }
-  }
 }
