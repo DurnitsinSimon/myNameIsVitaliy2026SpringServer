@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
+import { join } from 'path';
 
 interface ObjectData {
   title: string;
@@ -15,6 +16,8 @@ interface ObjectData {
 
 @Injectable()
 export class PdfGenerator {
+  private readonly fontPath = join(process.cwd(), 'src', 'modules', 'export', 'assets', 'DejaVuSans.ttf');
+
   async generate(object: ObjectData): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -23,6 +26,9 @@ export class PdfGenerator {
       doc.on('data', (chunk) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
+
+      doc.registerFont('DejaVu', this.fontPath);
+      doc.font('DejaVu');
 
       doc.fontSize(24).fillColor('#1B1B27').text(object.title);
       doc.moveDown(0.3);
