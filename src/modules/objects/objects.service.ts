@@ -80,7 +80,7 @@ export class ObjectsService {
     return this.repository.delete(id);
   }
 
-  private validateForPublishing(object: {
+  validateForPublishing(object: {
     title: string;
     city: string;
     shortDescription: string;
