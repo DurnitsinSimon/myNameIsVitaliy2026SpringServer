@@ -24,13 +24,7 @@ export class WordpressService {
   }
 
   async publish(objectId: string) {
-    const object = await this.prisma.object.findUnique({
-      where: { id: objectId },
-      include: { media: true },
-    });
-    if (!object) {
-      throw new NotFoundException('Объект не найден');
-    }
+    const object = await this.objectsService.findByIdForPublishing(objectId);
 
     this.objectsService.validateForPublishing(object);
 
@@ -101,11 +95,15 @@ export class WordpressService {
     ].join('');
 
     return {
-      title: object.title,
+      title: object.seoTitle || object.title,
       content,
-      excerpt: object.shortDescription,
+      excerpt: object.seoDescription || object.shortDescription,
       status: 'publish' as const,
       slug: object.seoSlug || undefined,
+      meta: {
+        _yoast_wpseo_title: object.seoTitle || undefined,
+        _yoast_wpseo_metadesc: object.seoDescription || undefined,
+      },
     };
   }
 

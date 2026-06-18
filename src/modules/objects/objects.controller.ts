@@ -18,6 +18,11 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import * as client from '@prisma/client';
 import { UpdateStatusDto } from './dto/updateStatusObject.dto';
 import { Audit } from '../../common/decorators/audit.decorator';
+import { SetCategoriesDto } from './dto/setCategories.dto';
+import { ApiOperation } from '@nestjs/swagger';
+import { SetTechSpecsDto } from './dto/setTechSpecs.dto';
+import { SetTeamMembersDto } from './dto/setTeamMembers.dto';
+
 
 @Controller('objects')
 export class ObjectsController {
@@ -68,5 +73,32 @@ export class ObjectsController {
     @CurrentUser() user: client.User,
   ) {
     return this.objectsService.delete(id, user.id, user.role);
+  }
+
+  @ApiOperation({ summary: 'Установить категории объекта' })
+  @Patch(':id/categories')
+  setCategories(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetCategoriesDto,
+  ) {
+    return this.objectsService.setCategories(id, dto.categoryIds);
+  }
+
+  @ApiOperation({ summary: 'Установить технико-экономические показатели объекта' })
+  @Patch(':id/tech-specs')
+  setTechSpecs(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetTechSpecsDto,
+  ) {
+    return this.objectsService.setTechSpecs(id, dto.items);
+  }
+
+  @ApiOperation({ summary: 'Установить команду проекта' })
+  @Patch(':id/team')
+  setTeamMembers(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetTeamMembersDto,
+  ) {
+    return this.objectsService.setTeamMembers(id, dto.items);
   }
 }
