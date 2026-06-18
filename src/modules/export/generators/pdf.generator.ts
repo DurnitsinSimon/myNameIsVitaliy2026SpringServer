@@ -16,8 +16,8 @@ interface ObjectData {
 
 @Injectable()
 export class PdfGenerator {
-  private readonly fontPath = join(process.cwd(), 'src', 'modules', 'export', 'assets', 'DejaVuSans.ttf');
-
+  private readonly fontPath = join(__dirname, 'assets', 'DejaVuSans.ttf');
+  
   async generate(object: ObjectData): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ size: 'A4', margin: 50 });

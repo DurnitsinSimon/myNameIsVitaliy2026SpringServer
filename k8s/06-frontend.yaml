@@ -1,0 +1,35 @@
+# --- Запуск фронтенда ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inpad-frontend
+  namespace: inpad
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inpad-frontend
+  template:
+    metadata:
+      labels:
+        app: inpad-frontend
+    spec:
+      containers:
+        - name: inpad-frontend
+          image: inpad-frontend:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+---
+# --- Адрес фронтенда внутри кластера ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inpad-frontend
+  namespace: inpad
+spec:
+  selector:
+    app: inpad-frontend
+  ports:
+    - port: 80
+      targetPort: 80

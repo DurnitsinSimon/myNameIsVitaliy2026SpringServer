@@ -38,6 +38,7 @@ export class CategoriesService {
     return this.prisma.category.delete({ where: { id } });
   }
 
+  
   private slugify(text: string): string {
     const map: Record<string, string> = {
       а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh',

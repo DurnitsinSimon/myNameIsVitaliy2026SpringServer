@@ -1,0 +1,97 @@
+# --- Запуск бэкенда ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inpad-backend
+  namespace: inpad
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inpad-backend
+  template:
+    metadata:
+      labels:
+        app: inpad-backend
+    spec:
+      # Подготовительный контейнер: ждём, пока PostgreSQL начнёт отвечать
+      initContainers:
+        - name: wait-for-postgres
+          image: postgres:16
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgres -p 5432; do
+                echo "Ждём PostgreSQL..."
+                sleep 2
+              done
+      containers:
+        - name: inpad-backend
+          image: inpad-backend:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            # Из секрета
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: inpad-secrets
+                  key: DATABASE_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: inpad-secrets
+                  key: JWT_SECRET
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: inpad-secrets
+                  key: MINIO_ROOT_USER
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: inpad-secrets
+                  key: MINIO_ROOT_PASSWORD
+            # Прямые значения (адреса сервисов внутри кластера)
+            - name: MINIO_ENDPOINT
+              value: "minio"
+            - name: MINIO_PORT
+              value: "9000"
+            - name: MINIO_USE_SSL
+              value: "false"
+            - name: MINIO_BUCKET
+              value: "inpad-media"
+            - name: JWT_EXPIRES_IN
+              value: "7d"
+            - name: PORT
+              value: "3000"
+            - name: WORDPRESS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: inpad-secrets
+                  key: WORDPRESS_URL
+            - name: WORDPRESS_USER
+              valueFrom:
+                secretKeyRef:
+                  name: inpad-secrets
+                  key: WORDPRESS_USER
+            - name: WORDPRESS_APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: inpad-secrets
+                  key: WORDPRESS_APP_PASSWORD
+---
+# --- Адрес бэкенда внутри кластера ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inpad-backend
+  namespace: inpad
+spec:
+  selector:
+    app: inpad-backend
+  ports:
+    - port: 3000
+      targetPort: 3000
