@@ -8,6 +8,7 @@ interface WpPostPayload {
   status: 'publish' | 'draft';
   excerpt?: string;
   slug?: string;
+  meta?: Record<string, string | undefined>;
 }
 
 @Injectable()

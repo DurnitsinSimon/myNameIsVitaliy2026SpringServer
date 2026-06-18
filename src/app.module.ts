@@ -15,6 +15,8 @@ import { ExportModule } from './modules/export/export.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { DictionariesModule } from './modules/dictionaries/dictionaries.module';
+import { UsersModule } from './modules/users/users.module';
+import { CategoriesModule } from './modules/categories/categories.module';
 
 @Module({
   imports: [
@@ -28,7 +30,9 @@ import { DictionariesModule } from './modules/dictionaries/dictionaries.module';
     WordpressModule,
     ExportModule,
     AuditModule,
-    DictionariesModule
+    DictionariesModule,
+    UsersModule,
+    CategoriesModule
   ],
   providers: [
     PrismaService,

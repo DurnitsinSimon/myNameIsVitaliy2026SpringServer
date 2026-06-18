@@ -34,17 +34,29 @@ export class ObjectsService {
     return object;
   }
 
-  async update(id: string, dto: UpdateObjectDto, userId: string, userRole: UserRole) {
+  async update(
+    id: string,
+    dto: UpdateObjectDto,
+    userId: string,
+    userRole: UserRole,
+  ) {
     const object = await this.findById(id);
 
     if (userRole === UserRole.EDITOR && object.authorId !== userId) {
-      throw new ForbiddenException('Вы можете редактировать только свои объекты');
+      throw new ForbiddenException(
+        'Вы можете редактировать только свои объекты',
+      );
     }
 
     return this.repository.update(id, dto);
   }
 
-  async updateStatus(id: string, status: ObjectStatus, userId: string, userRole: UserRole) {
+  async updateStatus(
+    id: string,
+    status: ObjectStatus,
+    userId: string,
+    userRole: UserRole,
+  ) {
     const object = await this.findById(id);
 
     if (userRole === UserRole.EDITOR && object.authorId !== userId) {
@@ -69,7 +81,9 @@ export class ObjectsService {
     const object = await this.findById(id);
 
     if (userRole !== UserRole.ADMIN && object.authorId !== userId) {
-      throw new ForbiddenException('Удалять объект может только администратор или его автор');
+      throw new ForbiddenException(
+        'Удалять объект может только администратор или его автор',
+      );
     }
 
     await this.audit.log({
@@ -88,6 +102,7 @@ export class ObjectsService {
     seoDescription: string | null;
     seoSlug: string | null;
     media: { type: string }[];
+    categories: { categoryId: string }[];
   }) {
     const errors: string[] = [];
 
@@ -101,11 +116,47 @@ export class ObjectsService {
     const hasMainImage = object.media?.some((m) => m.type === 'MAIN_IMAGE');
     if (!hasMainImage) errors.push('Отсутствует главное изображение');
 
+    if (!object.categories || object.categories.length === 0) {
+      errors.push('Не выбрана ни одна категория');
+    }
+
     if (errors.length > 0) {
       throw new BadRequestException({
         message: 'Объект не готов к публикации',
         errors,
       });
     }
+  }
+
+ async setCategories(objectId: string, categoryIds: string[]) {
+    await this.findById(objectId); 
+    await this.repository.setCategories(objectId, categoryIds);
+    return this.findById(objectId);
+  }
+
+  async findByIdForPublishing(id: string) {
+    const object = await this.repository.findByIdForPublishing(id);
+    if (!object) {
+      throw new NotFoundException('Объект не найден');
+    }
+    return object;
+  }
+
+  async setTechSpecs(
+    objectId: string,
+    items: { label: string; value: string; unit?: string; sortOrder?: number }[],
+  ) {
+    await this.findById(objectId);
+    await this.repository.setTechSpecs(objectId, items);
+    return this.findById(objectId);
+  }
+
+  async setTeamMembers(
+    objectId: string,
+    items: { role: string; name: string; sortOrder?: number }[],
+  ) {
+    await this.findById(objectId);
+    await this.repository.setTeamMembers(objectId, items);
+    return this.findById(objectId);
   }
 }

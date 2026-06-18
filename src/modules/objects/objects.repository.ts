@@ -103,4 +103,55 @@ export class ObjectsRepository {
   async delete(id: string) {
     return this.prisma.object.delete({ where: { id } });
   }
+
+  async setCategories(objectId: string, categoryIds: string[]) {
+    return this.prisma.$transaction([
+      this.prisma.objectCategory.deleteMany({ where: { objectId } }),
+      this.prisma.objectCategory.createMany({
+        data: categoryIds.map((categoryId) => ({ objectId, categoryId })),
+      }),
+    ]);
+  }
+
+  async findByIdForPublishing(id: string) {
+    return this.prisma.object.findUnique({
+      where: { id },
+      include: { media: true, categories: true },
+    });
+  }
+
+  async setTechSpecs(
+    objectId: string,
+    items: { label: string; value: string; unit?: string; sortOrder?: number }[],
+  ) {
+    return this.prisma.$transaction([
+      this.prisma.techSpec.deleteMany({ where: { objectId } }),
+      this.prisma.techSpec.createMany({
+        data: items.map((item, index) => ({
+          objectId,
+          label: item.label,
+          value: item.value,
+          unit: item.unit,
+          sortOrder: item.sortOrder ?? index,
+        })),
+      }),
+    ]);
+  }
+
+  async setTeamMembers(
+    objectId: string,
+    items: { role: string; name: string; sortOrder?: number }[],
+  ) {
+    return this.prisma.$transaction([
+      this.prisma.teamMember.deleteMany({ where: { objectId } }),
+      this.prisma.teamMember.createMany({
+        data: items.map((item, index) => ({
+          objectId,
+          role: item.role,
+          name: item.name,
+          sortOrder: item.sortOrder ?? index,
+        })),
+      }),
+    ]);
+  }
 }
